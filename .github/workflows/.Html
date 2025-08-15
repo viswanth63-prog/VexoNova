@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>VexoNova — Ultra Grand</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode:'class',
+      theme:{
+        extend:{
+          colors:{ brand:{DEFAULT:'#7c3aed'} },
+          boxShadow:{ glow:'0 10px 40px rgba(124,58,237,.35)' }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* base */
+    body{ font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Apple Color Emoji", "Segoe UI Emoji"; }
+    .glass{ background: linear-gradient(180deg, rgba(17,24,39,.7), rgba(17,24,39,.5)); backdrop-filter: blur(10px); border:1px solid rgba(255,255,255,.06); }
+    .ring-soft{ box-shadow: inset 0 0 0 1px rgba(255,255,255,.06) }
+    .card{ transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease, opacity .25s ease, transform .2s ease }
+    .card:hover{ transform: translateY(-6px); box-shadow: 0 30px 60px rgba(0,0,0,.35) }
+    .btn{ transition: transform .08s ease, box-shadow .2s ease }
+    .btn:active{ transform: translateY(1px) scale(.99) }
+    .hover-bright:hover{ filter: saturate(1.05) brightness(1.02) }
+
+    /* custom scrollbars */
+    *::-webkit-scrollbar{ width:10px; height:10px }
+    *::-webkit-scrollbar-track{ background:rgba(148,163,184,.08); border-radius:999px }
+    *::-webkit-scrollbar-thumb{ background:linear-gradient(180deg,#a78bfa,#60a5fa); border-radius:999px }
+    *{ scrollbar-width:thin; scrollbar-color:#8b5cf6 #0f172a }
+
+    /* card delete overlay */
+    .thumb-overlay-btn{ opacity:0; transform: translateY(-4px); transition:opacity .18s ease, transform .18s ease }
+    .card:hover .thumb-overlay-btn{ opacity:1; transform: translateY(0) }
+
+    /* confirmation modal */
+    .confirm-backdrop{ background: linear-gradient(0deg, rgba(2,6,23,0.6), rgba(2,6,23,0.6)); backdrop-filter: blur(6px); }
+    .fade-out { opacity:0 !important; transform: scale(.98) !important; height:0 !important; margin:0 !important; padding:0 !important; overflow:hidden !important; transition: all .26s ease; }
+
+    /* clamp */
+    .line-clamp-2{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+  <!-- Top -->
+  <header class="sticky top-0 z-40 border-b border-white/10 backdrop-blur glass">
+    <div class="mx-auto max-w-[1400px] px-4 sm:px-6 py-3 flex items-center gap-3">
+      <button id="navHome" class="px-3 py-2 rounded-xl hover:bg-white/5 btn" title="VexoNova Home"><span class="font-black text-xl">◦</span></button>
+      <div class="text-2xl sm:text-3xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-fuchsia-400 via-violet-400 to-emerald-400">VexoNova</div>
+      <div class="flex-1"></div>
+      <div class="hidden md:flex items-center w-full max-w-xl">
+        <input id="searchInput" placeholder="Search videos, creators, tags…" class="flex-1 rounded-l-2xl px-4 py-2 bg-slate-900/70 border border-white/10 focus:outline-none focus:ring-2 focus:ring-violet-400/40"/>
+        <button id="searchBtn" class="rounded-r-2xl px-3 py-2 bg-white/5 border border-l-0 border-white/10">🔎</button>
+      </div>
+      <button id="openUpload" class="ml-2 px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white shadow-glow btn">Upload</button>
+      <button id="accountBtn" class="ml-2 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white btn">Sign Up</button>
+      <button id="themeToggle" class="ml-1 px-2 py-2 rounded-xl hover:bg-white/5" title="Toggle theme">🌙</button>
+    </div>
+  </header>
+
+  <!-- Layout -->
+  <div class="mx-auto max-w-[1400px] px-4 sm:px-6 flex gap-4">
+    <aside class="hidden lg:block sticky top-[76px] h-[calc(100vh-76px)] w-72 py-4">
+      <div class="h-full overflow-y-auto pr-2">
+        <nav class="grid gap-1">
+          <button class="nav-btn flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5" data-view="home">🏠 <span>Home</span></button>
+          <button class="nav-btn flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5" data-view="subscriptions">🔔 <span>Subscriptions</span></button>
+          <button class="nav-btn flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5" data-view="watchlater">⏱ <span>Watch Later</span></button>
+          <button class="nav-btn flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5" data-view="history">🕓 <span>History</span></button>
+          <button class="nav-btn flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5" data-view="uploads">⬆️ <span>Your Uploads</span></button>
+        </nav>
+        <div class="my-4 border-t border-white/10"></div>
+        <p class="text-xs text-slate-400 px-2">Topics</p>
+        <div id="topics" class="mt-2 grid grid-cols-2 gap-2"></div>
+      </div>
+    </aside>
+
+    <main class="flex-1">
+      <div class="flex items-center gap-2 py-3 sticky top-[76px] z-30 backdrop-blur glass border-b border-white/10">
+        <div id="categories" class="flex gap-2 overflow-x-auto px-2"></div>
+        <div class="flex-1"></div>
+        <div class="hidden sm:flex items-center gap-2 pr-2">
+          <span class="text-slate-400">Sort</span>
+          <select id="sortSelect" class="border border-white/10 rounded-xl px-2 py-1 bg-slate-900/70"><option>Newest</option><option>Most viewed</option><option>Shortest</option></select>
+        </div>
+      </div>
+
+      <section id="viewTitle" class="flex items-center justify-between py-4">
+        <h2 class="text-lg font-semibold opacity-90">Home</h2>
+        <div class="flex items-center gap-2">
+          <div class="text-xs text-slate-400" id="welcomeUser"></div>
+          <!-- Clear All placeholder -->
+          <div id="clearAllWrapper"></div>
+        </div>
+      </section>
+
+      <div id="videoGrid" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-24"></div>
+    </main>
+  </div>
+
+  <!-- Player Modal -->
+  <div id="playerModal" class="fixed inset-0 bg-black/70 hidden z-[60] flex items-center justify-center p-4">
+    <div class="bg-slate-950/95 max-w-6xl w-full rounded-2xl ring-soft overflow-hidden grid md:grid-cols-[1fr,360px]">
+      <div class="p-4 max-h-[85vh] overflow-y-auto">
+        <div class="relative w-full aspect-video bg-black rounded-xl overflow-hidden ring-soft">
+          <video id="playerVideo" controls class="h-full w-full"></video>
+        </div>
+        <h2 id="playerTitle" class="mt-3 text-2xl font-bold leading-tight"></h2>
+        <div class="mt-1 text-sm text-slate-400" id="playerMeta"></div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button id="likeBtn" class="btn px-3 py-2 rounded-full bg-white/5 hover:bg-white/10">👍 <span id="likeCount"></span></button>
+          <button id="shareBtn" class="btn px-3 py-2 rounded-full bg-white/5 hover:bg-white/10">🔗 Share</button>
+          <button id="subBtn" class="btn px-3 py-2 rounded-full bg-emerald-600/80 hover:bg-emerald-600"><span id="subText">Subscribe</span> 🔔</button>
+          <button id="theaterBtn" class="btn px-3 py-2 rounded-full bg-white/5 hover:bg-white/10">🖥 Theater</button>
+        </div>
+
+        <div class="mt-4 rounded-xl ring-soft p-4 bg-white/5">
+          <p id="playerDesc" class="opacity-90"></p>
+          <div id="playerTags" class="mt-2 flex gap-1 flex-wrap"></div>
+        </div>
+
+        <div class="mt-5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Comments</h3>
+            <span class="text-xs text-slate-400">scrollable</span>
+          </div>
+          <div class="mt-2 flex gap-2">
+            <input id="commentInput" placeholder="Add a public comment" class="flex-1 rounded-xl px-3 py-2 bg-slate-900/70 border border-white/10"/>
+            <button id="commentPost" class="btn px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500">Post</button>
+          </div>
+          <div id="commentsList" class="mt-3 grid gap-3 max-h-64 overflow-y-auto rounded-xl ring-soft p-2 bg-white/5"></div>
+        </div>
+      </div>
+
+      <div class="border-l border-white/10 p-3 max-h-[85vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold">Up next</h3>
+          <button id="closeModal" class="p-2 rounded-xl hover:bg-white/5" aria-label="Close">✖</button>
+        </div>
+        <div id="upNext" class="grid gap-3 pr-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Modal -->
+  <div id="uploadModal" class="fixed inset-0 bg-black/70 hidden z-[70] grid place-items-center p-4">
+    <div class="w-full max-w-xl rounded-2xl bg-slate-950/95 p-6 ring-soft">
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-2xl font-bold">Upload a video</h2>
+          <p class="text-sm text-slate-400">MP4 or WebM recommended. Stored locally.</p>
+        </div>
+        <button id="closeUpload" class="p-2 rounded-xl hover:bg-white/5">✖</button>
+      </div>
+      <form id="uploadForm" class="mt-4 grid gap-3">
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-sm text-slate-300">Title</label>
+            <input name="title" required class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-900/70 border border-white/10" />
+          </div>
+          <div>
+            <label class="text-sm text-slate-300">Channel</label>
+            <input name="channel" required class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-900/70 border border-white/10" />
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-sm text-slate-300">Topic</label>
+            <select name="category" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-900/70 border border-white/10">
+              <option>Gaming</option><option>Music</option><option>News</option><option>Tech</option>
+              <option>Education</option><option>Sports</option><option>Comedy</option><option>Shorts</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm text-slate-300">Tags (comma separated)</label>
+            <input name="tags" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-900/70 border border-white/10" />
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-sm text-slate-300">Thumbnail (image file)</label>
+            <input type="file" name="thumb" accept="image/*" class="w-full mt-1" />
+          </div>
+          <div>
+            <label class="text-sm text-slate-300">Video file</label>
+            <input type="file" name="video" accept="video/*" class="w-full mt-1" />
+          </div>
+        </div>
+        <button class="mt-2 btn px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 w-full">Upload</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Account Modal -->
+  <div id="accountModal" class="fixed inset-0 bg-black/70 hidden z-[70] grid place-items-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-slate-950/95 p-6 ring-soft">
+      <div class="flex items-start justify-between">
+        <div>
+          <h2 class="text-2xl font-bold">Create your account</h2>
+          <p class="text-sm text-slate-400">Sign up to sync likes, history, and subscriptions (locally).</p>
+        </div>
+        <button id="closeAccount" class="p-2 rounded-xl hover:bg-white/5">✖</button>
+      </div>
+      <form id="signupForm" class="mt-4 grid gap-3">
+        <div>
+          <label class="text-sm text-slate-300">Name</label>
+          <input name="name" required class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-900/70 border border-white/10" />
+        </div>
+        <div>
+          <label class="text-sm text-slate-300">Email</label>
+          <input type="email" name="email" required class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-900/70 border border-white/10" />
+        </div>
+        <div>
+          <label class="text-sm text-slate-300">Password</label>
+          <input type="password" name="password" minlength="6" required class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-900/70 border border-white/10" />
+        </div>
+        <button class="mt-2 btn px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 w-full">Create account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal (custom) -->
+  <div id="confirmModal" class="fixed inset-0 hidden z-[80] grid place-items-center confirm-backdrop">
+    <div class="w-full max-w-md rounded-2xl bg-slate-900/95 p-5 ring-soft">
+      <h3 class="text-lg font-semibold" id="confirmTitle">Confirm</h3>
+      <p class="text-sm text-slate-300 mt-2" id="confirmMessage">Are you sure?</p>
+      <div class="mt-4 flex justify-end gap-3">
+        <button id="confirmCancel" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10">Cancel</button>
+        <button id="confirmOk" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 hidden px-4 py-2 rounded-xl bg-slate-900 text-white shadow-xl"></div>
+  <canvas id="confetti" class="pointer-events-none fixed inset-0 z-[79]"></canvas>
+
+  <script>
+    /* ========== Data & util ========== */
+    const CATEGORIES = ['All','Gaming','Music','News','Tech','Education','Sports','Comedy','Shorts'];
+    const SAMPLE_VIDEOS = [
+      { id:'v1', title:'How to Beat Hard Obbys (Pro Tips)', channel:'ZyphorBlox', category:'Gaming', views:126000, uploadedAt:'2025-07-28', duration:612, tags:['roblox','obby','pro'], thumb:'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&auto=format&fit=crop', src:'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', description:'Master the toughest obbys with precise jumps, camera control, and momentum tricks.' },
+      { id:'v2', title:'Lo-Fi Beats to Study — 1 Hour Mix', channel:'CloudSound', category:'Music', views:980000, uploadedAt:'2025-06-09', duration:3600, tags:['lofi','study','chill'], thumb:'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1200&auto=format&fit=crop', src:'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', description:'A smooth, distraction-free lo-fi mix to help you focus.' },
+      { id:'v3', title:'Breaking: This Week in Tech', channel:'TechNow', category:'News', views:743000, uploadedAt:'2025-08-10', duration:900, tags:['news','tech','recap'], thumb:'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=1200&auto=format&fit=crop', src:'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', description:'Your fast weekly tech recap.' },
+      { id:'v4', title:'JavaScript in 15 Minutes (2025 Crash Course)', channel:'CodeShot', category:'Education', views:1540000, uploadedAt:'2025-05-21', duration:940, tags:['coding','js','beginner'], thumb:'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=1200&auto=format&fit=crop', src:'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4', description:'A rapid intro to JS syntax.' },
+      { id:'v5', title:'Top 10 Clutch Moments — 2025', channel:'SportBurst', category:'Sports', views:560000, uploadedAt:'2025-04-10', duration:780, tags:['sports','highlights'], thumb:'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1200&auto=format&fit=crop', src:'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4', description:'The most jaw-dropping game-winning plays.' },
+      { id:'v6', title:'Build a Budget Gaming PC (₹40k)', channel:'BitForge', category:'Tech', views:220000, uploadedAt:'2025-03-14', duration:1100, tags:['pc build','budget','india'], thumb:'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&auto=format&fit=crop', src:'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4', description:'Component picks and benchmarks.' },
+      { id:'v7', title:'Try Not to Laugh — Roblox Memes #58', channel:'BlockBusters', category:'Comedy', views:310000, uploadedAt:'2025-08-01', duration:600, tags:['roblox','memes','funny'], thumb:'https://images.unsplash.com/photo-1516387938699-a93567ec168e?w=1200&auto=format&fit=crop', src:'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4', description:'Unhinged avatars and physics fails.' },
+      { id:'v8', title:'Short: Insane Water Bottle Flip', channel:'QuickClips', category:'Shorts', views:45000, uploadedAt:'2025-08-12', duration:23, tags:['shorts','trick'], thumb:'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1200&auto=format&fit=crop', src:'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4', description:'One-take bottle flip.' }
+    ];
+
+    const $ = (s, root=document) => root.querySelector(s);
+    const $$ = (s, root=document) => Array.from((root||document).querySelectorAll(s));
+
+    const store = {
+      get k(){ return 'vexonova-v3'; },
+      read(){ try{ return JSON.parse(localStorage.getItem(this.k))||{} }catch{return {}} },
+      write(v){ localStorage.setItem(this.k, JSON.stringify(v)); },
+      patch(p){ const d=this.read(); this.write({...d, ...p}); },
+      clear(){ localStorage.removeItem(this.k); }
+    };
+
+    function formatViews(n){ if(n>=1_000_000) return (n/1_000_000).toFixed(1).replace(/\.0$/,'')+'M'; if(n>=1_000) return (n/1_000).toFixed(1).replace(/\.0$/,'')+'K'; return String(n); }
+    function timeAgo(dateStr){ if(!dateStr) return ''; const then=new Date(dateStr); const diff=Date.now()-then.getTime(); const d=Math.floor(diff/(1000*60*60*24)); if(d<=0) return 'today'; if(d===1) return '1 day ago'; if(d<30) return `${d} days ago`; const m=Math.floor(d/30); if(m===1) return '1 month ago'; if(m<12) return `${m} months ago`; const y=Math.floor(m/12); return y===1 ? '1 year ago' : `${y} years ago`; }
+    function formatDuration(sec){ const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=Math.floor(sec%60); return [h,m,s].filter((v,i)=>v!==0||i>0).map(v=>String(v).padStart(2,'0')).join(':'); }
+    function toast(msg, ms=1500){ const t=$('#toast'); t.textContent=msg; t.classList.remove('hidden'); setTimeout(()=>t.classList.add('hidden'), ms); }
+
+    /* confetti (keeps same) */
+    const confettiCanvas = $('#confetti'); const ctx = confettiCanvas.getContext('2d');
+    function resizeConfetti(){ confettiCanvas.width = innerWidth; confettiCanvas.height = innerHeight; } addEventListener('resize', resizeConfetti); resizeConfetti();
+    let particles=[]; function fireConfetti(x=innerWidth/2,y=innerHeight/3){
+      const colors=['#a78bfa','#f472b6','#34d399','#60a5fa','#fbbf24'];
+      for(let i=0;i<120;i++) particles.push({x,y,r:Math.random()*3+2,vx:(Math.random()-0.5)*6,vy:(Math.random()-0.5)*-6-2,a:1,col:colors[i%colors.length]});
+      (function tick(){ ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height); particles.forEach(p=>{ p.vy+=0.12; p.x+=p.vx; p.y+=p.vy; p.a-=0.01; ctx.globalAlpha=Math.max(p.a,0); ctx.fillStyle=p.col; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }); particles=particles.filter(p=>p.a>0&&p.y<innerHeight+20); if(particles.length) requestAnimationFrame(tick); else ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height); })();
+    }
+
+    /* ===== State ===== */
+    let activeCat='All', sort='Newest', query='', currentVideo=null;
+    const state = {
+      get user(){ return store.read().user || null; }, set user(u){ store.patch({user:u}); renderAuth(); },
+      get likes(){ return store.read().likes || {}; }, set likes(v){ const d=store.read(); d.likes=v; store.write(d); },
+      get subs(){ return store.read().subs || {}; }, set subs(v){ const d=store.read(); d.subs=v; store.write(d); },
+      get history(){ return store.read().history || []; }, set history(v){ const d=store.read(); d.history=v; store.write(d); },
+      get uploads(){ return store.read().uploads || []; }, set uploads(v){ const d=store.read(); d.uploads=v; store.write(d); },
+      get comments(){ return store.read().comments || {}; }, set comments(v){ const d=store.read(); d.comments=v; store.write(d); },
+      get watchlater(){ return store.read().watchlater || {}; }, set watchlater(v){ const d=store.read(); d.watchlater=v; store.write(d); },
+      get hiddenFeed(){ return store.read().hiddenFeed || {}; }, set hiddenFeed(v){ const d=store.read(); d.hiddenFeed=v; store.write(d); }
+    };
+
+    /* ====== Renderers & helpers ====== */
+    function renderAuth(){ const u=state.user; $('#accountBtn').textContent = u ? 'Account' : 'Sign Up'; $('#welcomeUser').textContent = u ? `Signed in as ${u.name}` : ''; }
+    function chip(c){ const act = activeCat===c ? 'bg-violet-600 text-white' : 'bg-white/5 hover:bg-white/10 text-slate-200'; return `<button data-cat="${c}" class="px-4 py-2 rounded-full ${act} btn">${c}</button>` }
+    function renderCategories(){ $('#categories').innerHTML = CATEGORIES.map(chip).join(''); $('#topics').innerHTML = CATEGORIES.slice(1).map(c=>`<span class="px-2 py-1 rounded-lg bg-white/5 ring-soft w-fit">${c}</span>`).join(''); }
+
+    function applyFilters(list){
+      let filtered = [...list, ...state.uploads];
+      // filter out hidden when on subscriptions view (hiddenFeed used)
+      if(activeCat!=='All') filtered = filtered.filter(v=>v.category===activeCat);
+      if(query.trim()){ const q=query.toLowerCase(); filtered = filtered.filter(v=> v.title.toLowerCase().includes(q) || v.channel.toLowerCase().includes(q) || (v.tags||[]).some(t=>t.toLowerCase().includes(q)) ); }
+      if(sort==='Newest') filtered.sort((a,b)=> new Date(b.uploadedAt)-new Date(a.uploadedAt));
+      if(sort==='Most viewed') filtered.sort((a,b)=> (b.views||0)-(a.views||0));
+      if(sort==='Shortest') filtered.sort((a,b)=> (a.duration||0)-(b.duration||0));
+      return filtered;
+    }
+
+    /* cardHTML now includes delete overlay button (visible on hover). The delete button has data-delete attribute. */
+    function cardHTML(v){
+      const liked = !!state.likes[v.id];
+      const subbed = !!state.subs[v.channel];
+      const saved = !!state.watchlater[v.id];
+      return `
+      <div class="card rounded-2xl overflow-hidden bg-white/5 ring-soft group transition" data-id="${v.id}">
+        <div class="relative aspect-video">
+          <img src="${v.thumb}" class="h-full w-full object-cover hover-bright" alt="${v.title}">
+          <div class="absolute bottom-2 right-2 text-xs font-semibold bg-black/70 text-white px-2 py-0.5 rounded">${formatDuration(v.duration||Math.floor(Math.random()*800+60))}</div>
+          <div class="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-violet-600 text-white/95">${v.category}</div>
+
+          <!-- Watch later toggle -->
+          <button class="absolute top-2 right-2 text-[11px] px-2 py-1 rounded bg-white/10 hover:bg-white/20" data-save="${v.id}">${saved?'✔ Saved':'＋ Watch later'}</button>
+
+          <!-- Delete icon (appears on hover) -->
+          <button title="Delete" class="thumb-overlay-btn absolute -translate-y-0 left-2 top-2 bg-white/6 text-rose-400 hover:text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100" data-delete="${v.id}" aria-label="Delete video">
+            🗑
+          </button>
+        </div>
+
+        <div class="p-3 flex gap-3">
+          <div class="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500/30 to-emerald-500/30 grid place-items-center text-xs font-bold">${v.channel.slice(0,2).toUpperCase()}</div>
+          <div class="min-w-0">
+            <h3 class="font-semibold leading-tight line-clamp-2">${v.title}</h3>
+            <div class="text-sm text-slate-400 truncate">${v.channel} • ${formatViews(v.views||0)} views • ${timeAgo(v.uploadedAt||new Date().toISOString())}</div>
+            <div class="mt-2 flex gap-1 flex-wrap">${(v.tags||[]).map(t=>`<span class='text-xs px-2 py-0.5 rounded border border-white/10'>${t}</span>`).join('')}</div>
+          </div>
+        </div>
+
+        <div class="px-3 pb-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
+          <button class="btn px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10" data-like="${v.id}">${liked?'💜 Liked':'🤍 Like'}</button>
+          <button class="btn px-3 py-1.5 rounded-full ${subbed?'bg-emerald-700/70':'bg-emerald-600/60 hover:bg-emerald-600'}" data-sub="${v.channel}">${subbed?'Subscribed ✅':'Subscribe 🔔'}</button>
+        </div>
+      </div>
+      `;
+    }
+
+    function renderGrid(videos){
+      // filter out hiddenFeed items when viewing subscriptions
+      const view = document.body.dataset.view || 'home';
+      let list = videos;
+      if(view === 'subscriptions'){
+        const hidden = state.hiddenFeed || {};
+        list = list.filter(v=> !hidden[v.id]);
+      }
+      $('#videoGrid').innerHTML = list.map(cardHTML).join('');
+    }
+
+    function openPlayer(video){
+      currentVideo = video;
+      // history
+      const h = state.history.filter(x=>x.id!==video.id);
+      h.unshift({ id: video.id, at: Date.now() });
+      state.history = h.slice(0,500);
+
+      $('#playerVideo').src = video.src;
+      $('#playerTitle').textContent = video.title;
+      $('#playerMeta').textContent = `${video.channel} • ${formatViews(video.views||0)} views • ${timeAgo(video.uploadedAt||new Date().toISOString())}`;
+      $('#playerDesc').textContent = video.description||'';
+      $('#playerTags').innerHTML = (video.tags||[]).map(t=>`<span class="text-xs px-2 py-0.5 rounded border border-white/10">#${t}</span>`).join('');
+
+      const liked = !!state.likes[video.id];
+      $('#likeCount').textContent = formatViews(((video.views||0)/10|0) + (liked?1:0));
+      $('#likeBtn').dataset.id = video.id;
+
+      const subbed = !!state.subs[video.channel];
+      $('#subBtn').dataset.channel = video.channel;
+      $('#subText').textContent = subbed ? 'Subscribed' : 'Subscribe';
+
+      $('#upNext').innerHTML = applyFilters(SAMPLE_VIDEOS).filter(v=>v.id!==video.id).slice(0,10).map(v=>`
+        <div class="flex gap-3 cursor-pointer" data-id="${v.id}">
+          <div class="relative w-40 aspect-video"><img src="${v.thumb}" class="w-full h-full object-cover rounded"><span class="absolute bottom-1 right-1 text-[10px] bg-black/80 text-white px-1 rounded">${formatDuration(v.duration||120)}</span></div>
+          <div class="min-w-0"><div class="text-sm font-medium line-clamp-2">${v.title}</div><div class="text-xs text-slate-400">${v.channel} • ${formatViews(v.views||0)} views</div></div>
+        </div>
+      `).join('');
+
+      renderComments((store.read().comments||{})[video.id]||[]);
+      $('#playerModal').classList.remove('hidden');
+    }
+
+    function renderComments(list){
+      $('#commentsList').innerHTML = list.map(c=>`
+        <div class="flex gap-2"><div class="h-8 w-8 rounded-full bg-slate-300/20 grid place-items-center text-[10px] font-bold">${(c.user||'??').slice(0,2).toUpperCase()}</div><div><div class="text-sm font-medium">${c.user||'User'} <span class="text-xs text-slate-500">• just now</span></div><div class="text-sm">${c.text}</div></div></div>
+      `).join('');
+    }
+
+    /* ===== View control & Clear All UI ===== */
+    function setTitle(name){ $('#viewTitle h2').textContent = name; }
+
+    function addClearAllButtonIfNeeded(){
+      const wrapper = $('#clearAllWrapper');
+      wrapper.innerHTML = ''; // reset
+      const view = document.body.dataset.view || 'home';
+      const pagesWithClear = ['uploads','watchlater','history','subscriptions'];
+      if(pagesWithClear.includes(view)){
+        const btn = document.createElement('button');
+        btn.className = 'ml-2 text-xs px-3 py-1 rounded-full bg-rose-600 hover:bg-rose-500';
+        btn.textContent = 'Clear All';
+        btn.addEventListener('click', ()=> showConfirm(`Clear all on ${capitalize(view)}?`, `This will remove all items on ${capitalize(view)}. This action cannot be undone.`, ()=>{
+          clearAllForView(view);
+        }));
+        wrapper.appendChild(btn);
+      }
+    }
+
+    function capitalize(s){ return s && s[0].toUpperCase()+s.slice(1); }
+
+    function renderDefaultView(){ setTitle('Home'); addClearAllButtonIfNeeded(); renderGrid(applyFilters(SAMPLE_VIDEOS)); }
+    function renderSubsView(){
+      const channels = Object.keys(state.subs).filter(k=>state.subs[k]);
+      const list = [...SAMPLE_VIDEOS, ...state.uploads].filter(v=> channels.includes(v.channel));
+      setTitle('Subscriptions'); addClearAllButtonIfNeeded(); renderGrid(list);
+    }
+    function renderWatchLaterView(){
+      const wlIds = Object.keys(state.watchlater).filter(k=>state.watchlater[k]);
+      const list = wlIds.map(id => ([...SAMPLE_VIDEOS, ...state.uploads].find(v=>v.id===id))).filter(Boolean);
+      setTitle('Watch Later'); addClearAllButtonIfNeeded(); renderGrid(list);
+    }
+    function renderHistoryView(){
+      const ids = state.history.sort((a,b)=>b.at-a.at).map(h=>h.id);
+      const list = ids.map(id => ([...SAMPLE_VIDEOS, ...state.uploads].find(v=>v.id===id))).filter(Boolean);
+      setTitle('History'); addClearAllButtonIfNeeded(); renderGrid(list);
+    }
+    function renderUploadsView(){ setTitle('Your Uploads'); addClearAllButtonIfNeeded(); renderGrid(state.uploads); }
+
+    function refresh(){
+      const view = document.body.dataset.view || 'home';
+      if(view==='subscriptions') renderSubsView();
+      else if(view==='watchlater') renderWatchLaterView();
+      else if(view==='history') renderHistoryView();
+      else if(view==='uploads') renderUploadsView();
+      else renderDefaultView();
+    }
+
+    /* ===== Confirmation modal helper ===== */
+    let confirmCallback = null;
+    function showConfirm(title, message, okCb){
+      confirmCallback = okCb;
+      $('#confirmTitle').textContent = title || 'Confirm';
+      $('#confirmMessage').textContent = message || 'Are you sure?';
+      $('#confirmModal').classList.remove('hidden');
+    }
+    function hideConfirm(){ $('#confirmModal').classList.add('hidden'); confirmCallback = null; }
+
+    $('#confirmCancel').addEventListener('click', ()=> hideConfirm());
+    $('#confirmOk').addEventListener('click', ()=>{
+      if(typeof confirmCallback === 'function'){ confirmCallback(); }
+      hideConfirm();
+    });
+
+    /* ===== Delete logic ===== */
+    // deleteOne: decides action based on current view
+    function deleteOne(id){
+      const view = document.body.dataset.view || 'home';
+      if(view === 'uploads'){
+        // remove from uploads array
+        state.uploads = state.uploads.filter(v=>v.id!==id);
+        toast('Deleted upload');
+      } else if(view === 'watchlater'){
+        const wl = state.watchlater; delete wl[id]; state.watchlater = wl; toast('Removed from Watch Later');
+      } else if(view === 'history'){
+        state.history = state.history.filter(h=>h.id!==id); toast('Removed from History');
+      } else if(view === 'subscriptions'){
+        // hide this video from subscription feed only (does not unsubscribe)
+        const hidden = state.hiddenFeed; hidden[id] = true; state.hiddenFeed = hidden; toast('Removed from Subscriptions feed');
+      } else {
+        // default: if video exists in uploads, remove it there; else try remove watchlater/history entries
+        state.uploads = state.uploads.filter(v=>v.id!==id);
+        const wl = state.watchlater; delete wl[id]; state.watchlater = wl;
+        state.history = state.history.filter(h=>h.id!==id);
+        toast('Deleted');
+      }
+
+      // optimistic UI: fade-out the card element before re-render
+      const card = document.querySelector(`[data-id="${id}"]`);
+      if(card){
+        card.classList.add('fade-out');
+        setTimeout(()=> refresh(), 280);
+      } else {
+        refresh();
+      }
+    }
+
+    function clearAllForView(view){
+      if(view==='uploads'){ state.uploads = []; toast('All uploads deleted'); }
+      else if(view==='watchlater'){ state.watchlater = {}; toast('Watch later cleared'); }
+      else if(view==='history'){ state.history = []; toast('History cleared'); }
+      else if(view==='subscriptions'){ state.hiddenFeed = {}; toast('Subscription feed cleared'); /* clearing hidden feed => show nothing? Instead we will hide none. But user expects clear all: so mark all visible videos as hidden? We'll clear hiddenFeed so feed shows all; for "Clear all" on subscriptions we should hide all — do that below */ }
+      // For subscriptions clear all meaning: hide all videos from subscriptions feed
+      if(view==='subscriptions'){
+        const channels = Object.keys(state.subs).filter(k=>state.subs[k]);
+        const vids = [...SAMPLE_VIDEOS, ...state.uploads].filter(v=>channels.includes(v.channel)).map(v=>v.id);
+        const hidden = state.hiddenFeed || {};
+        vids.forEach(id=> hidden[id]=true );
+        state.hiddenFeed = hidden;
+        toast('Subscriptions feed cleared');
+      }
+      refresh();
+    }
+
+    /* ===== Events ===== */
+    document.addEventListener('click', (e)=>{
+      // categories
+      const cat = e.target.closest('[data-cat]'); if(cat){ activeCat = cat.dataset.cat; renderCategories(); refresh(); return; }
+
+      // open video from grid
+      const card = e.target.closest('[data-id]');
+      if(card && card.closest('#videoGrid')){ const id = card.dataset.id; const v = [...SAMPLE_VIDEOS, ...state.uploads].find(x=>x.id===id); if(v) openPlayer(v); return; }
+
+      // open up next
+      const next = e.target.closest('[data-id]');
+      if(next && next.closest('#upNext')){ const id=next.dataset.id; const v=[...SAMPLE_VIDEOS, ...state.uploads].find(x=>x.id===id); if(v) openPlayer(v); return; }
+
+      // delete single: click on data-delete
+      const del = e.target.closest('[data-delete]');
+      if(del){
+        e.stopPropagation();
+        const id = del.dataset.delete;
+        showConfirm('Delete video?', 'Are you sure you want to delete this video from this page? This action cannot be undone for uploads.', ()=> deleteWithAnimation(id));
+        return;
+      }
+
+      // like
+      const like = e.target.closest('[data-like]');
+      if(like){ const id=like.dataset.like; const likes = state.likes; likes[id]=!likes[id]; state.likes=likes; toast(likes[id]?'Liked!':'Unliked'); refresh(); if(currentVideo && currentVideo.id===id) openPlayer(currentVideo); return; }
+
+      // subscribe
+      const sub = e.target.closest('[data-sub]');
+      if(sub){ const ch=sub.dataset.sub; const subs = state.subs; const now = !(subs[ch]); subs[ch]=now; state.subs=subs; if(now) fireConfetti(innerWidth/2,120); toast(now?`Subscribed to ${ch}`:`Unsubscribed from ${ch}`); if(currentVideo && currentVideo.channel===ch){ $('#subText').textContent = now ? 'Subscribed' : 'Subscribe'; } refresh(); return; }
+
+      // watch later
+      const save = e.target.closest('[data-save]');
+      if(save){ const id=save.dataset.save; const wl = state.watchlater; wl[id] = !wl[id]; state.watchlater = wl; toast(wl[id]?'Saved to Watch later':'Removed from Watch later'); refresh(); return; }
+
+      // nav buttons
+      const nav = e.target.closest('.nav-btn');
+      if(nav){ document.body.dataset.view = nav.dataset.view; addClearAllButtonIfNeeded(); refresh(); return; }
+
+      // top actions
+      if(e.target.id==='shareBtn'){ navigator.clipboard?.writeText(location.href); toast('Link copied!'); }
+      if(e.target.id==='accountBtn'){ $('#accountModal').classList.remove('hidden'); }
+      if(e.target.id==='closeAccount'){ $('#accountModal').classList.add('hidden'); }
+      if(e.target.id==='openUpload'){ $('#uploadModal').classList.remove('hidden'); }
+      if(e.target.id==='closeUpload'){ $('#uploadModal').classList.add('hidden'); }
+      if(e.target.id==='scrollTop'){ window.scrollTo({top:0, behavior:'smooth'}); }
+      if(e.target.id==='navHome'){ document.body.dataset.view='home'; refresh(); }
+      if(e.target.id==='closeModal'){ $('#playerModal').classList.add('hidden'); }
+    });
+
+    // helper to visually animate then perform deleteOne
+    function deleteWithAnimation(id){
+      // find the card in DOM
+      const card = document.querySelector(`[data-id="${id}"]`);
+      if(card){
+        card.style.transition = 'opacity .22s ease, transform .22s ease';
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(6px) scale(.99)';
+        setTimeout(()=> deleteOne(id), 220);
+      } else deleteOne(id);
+    }
+
+    // click outside modals & Esc handling
+    ['playerModal','uploadModal','accountModal','confirmModal'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.addEventListener('click', (ev)=>{ if(ev.target === el) el.classList.add('hidden'); });
+    });
+    addEventListener('keydown', e=>{ if(e.key === 'Escape'){ ['playerModal','uploadModal','accountModal','confirmModal'].forEach(id=>document.getElementById(id)?.classList.add('hidden')); }});
+
+    // like/subscribe buttons inside player
+    $('#likeBtn').addEventListener('click', ()=>{ const id = $('#likeBtn').dataset.id; if(!id) return; const likes = state.likes; likes[id] = !likes[id]; state.likes = likes; openPlayer(currentVideo); toast(likes[id]?'Liked!':'Unliked'); refresh(); });
+    $('#subBtn').addEventListener('click', ()=>{ const ch = $('#subBtn').dataset.channel; if(!ch) return; const subs = state.subs; const now = !(subs[ch]); subs[ch] = now; state.subs = subs; $('#subText').textContent = now ? 'Subscribed' : 'Subscribe'; if(now) fireConfetti(innerWidth/2,120); toast(now?`Subscribed to ${ch}`:`Unsubscribed from ${ch}`); refresh(); });
+
+    // theater
+    $('#theaterBtn').addEventListener('click', ()=>{ const box = $('#playerVideo').parentElement; if(box.classList.contains('aspect-video')){ box.classList.remove('aspect-video'); box.classList.add('h-[70vh]'); } else { box.classList.remove('h-[70vh]'); box.classList.add('aspect-video'); } });
+
+    // search & sort
+    $('#sortSelect').addEventListener('change', e=>{ sort = e.target.value; refresh(); });
+    $('#searchInput').addEventListener('input', e=>{ query = e.target.value; refresh(); });
+    $('#searchBtn').addEventListener('click', ()=>{ query = $('#searchInput').value || ''; refresh(); });
+
+    // comments
+    $('#commentPost').addEventListener('click', ()=> {
+      const val = $('#commentInput').value.trim(); if(!val || !currentVideo) return;
+      const data = store.read(); data.comments = data.comments || {};
+      const arr = data.comments[currentVideo.id] || [];
+      const user = state.user?.name || 'You';
+      arr.unshift({ user, text: val, at: Date.now() });
+      data.comments[currentVideo.id] = arr; store.write(data);
+      $('#commentInput').value = ''; renderComments(arr);
+    });
+
+    // signup
+    $('#signupForm').addEventListener('submit', (e)=>{ e.preventDefault(); const fd=new FormData(e.target); const name=(fd.get('name')||'').toString().trim(); const email=(fd.get('email')||'').toString().trim(); const password=(fd.get('password')||'').toString(); if(!name||!email||!password){ toast('Please fill all fields'); return; } state.user = { name, email }; $('#accountModal').classList.add('hidden'); toast(`Welcome, ${name}!`); renderAuth(); refresh(); });
+
+    // upload
+    $('#uploadForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const title = (fd.get('title')||'').toString().trim();
+      const channel = (fd.get('channel')||'').toString().trim();
+      const category = (fd.get('category')||'Gaming').toString();
+      const tags = (fd.get('tags')||'').toString().split(',').map(s=>s.trim()).filter(Boolean);
+      const thumbFile = fd.get('thumb');
+      const videoFile = fd.get('video');
+      if(!title||!channel||!videoFile||!videoFile.size){ toast('Title, Channel, and a Video file are required'); return; }
+      const id = 'u_'+Math.random().toString(36).slice(2,9);
+      const thumb = (thumbFile && thumbFile.size) ? URL.createObjectURL(thumbFile) : 'https://picsum.photos/seed/'+id+'/800/450';
+      const src = URL.createObjectURL(videoFile);
+      const uploadedAt = new Date().toISOString();
+      const duration = Math.max(30, Math.min(7200, Math.floor((videoFile.size/180000) % 3600) + 60));
+      const newVid = { id, title, channel, category, views:0, uploadedAt, duration, tags, thumb, src, description:'Uploaded via VexoNova' };
+      const up = state.uploads; up.unshift(newVid); state.uploads = up;
+      $('#uploadModal').classList.add('hidden'); toast('Upload complete!'); fireConfetti(innerWidth/2,innerHeight/3);
+      document.body.dataset.view = 'uploads'; refresh();
+      e.target.reset();
+    });
+
+    // theme toggle
+    $('#themeToggle').addEventListener('click', ()=>{ document.documentElement.classList.toggle('dark'); document.body.classList.toggle('light'); });
+
+    // scroll to top
+    window.addEventListener('scroll', ()=>{ const y = window.scrollY; $('#scrollTop').classList.toggle('hidden', y<300); });
+
+    // helper init
+    function init(){ renderCategories(); renderAuth(); document.body.dataset.view='home'; refresh(); }
+    init();
+
+  </script>
+</body>
+</html>
